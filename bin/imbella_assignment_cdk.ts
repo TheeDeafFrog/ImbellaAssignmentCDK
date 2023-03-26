@@ -3,19 +3,29 @@ import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import { ImbellaAssignmentCdkStack } from '../lib/imbella_assignment_cdk-stack';
 
+import { Route53Client, ListHostedZonesByNameCommand } from '@aws-sdk/client-route-53';
+
 const app = new cdk.App();
-new ImbellaAssignmentCdkStack(app, 'ImbellaAssignmentCdkStack', {
-  /* If you don't specify 'env', this stack will be environment-agnostic.
-   * Account/Region-dependent features and context lookups will not work,
-   * but a single synthesized template can be deployed anywhere. */
 
-  /* Uncomment the next line to specialize this stack for the AWS Account
-   * and Region that are implied by the current CLI configuration. */
-  // env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },
+const env = { 
+  account: process.env.CDK_DEFAULT_ACCOUNT, 
+  region: process.env.CDK_DEFAULT_REGION 
+};
 
-  /* Uncomment the next line if you know exactly what Account and Region you
-   * want to deploy the stack to. */
-  // env: { account: '123456789012', region: 'us-east-1' },
+const r53Client = new Route53Client({
+  region: env.region
+});
 
-  /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
+const command = new ListHostedZonesByNameCommand({
+  DNSName: 'kevinr.net'
+});
+
+r53Client.send(command).then((response) => {
+  const hostedZoneId = response.HostedZones?.find((zone) => zone.Name?.includes('kevinr.net'))?.Id?.split('/')[2];
+
+  const app = new cdk.App();
+  new ImbellaAssignmentCdkStack(app, 'ImbellaAssignmentCdkStack', {
+      env,
+      hostedZoneId: hostedZoneId as string
+  });
 });
